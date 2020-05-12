@@ -27,14 +27,36 @@
 (rule-replacement
 (car *production-rules*))
 
-(let ((target "MIUU"))
+(defun do-n (target n)
+  "target is a list -- returns a list"
+  (if (= n 1)
+  (reduce #'append
+           (mapcar #'get-offspring 
+                   target))
+  (do-n
+  (reduce #'append
+           (mapcar #'get-offspring 
+                   target)) (- n 1))))
+
+(find "MU" (do-n '("MI") 8)
+      :test #'string=)
+  
+
+
+(reduce #'append 
+(mapcar #'get-offspring
+(get-offspring "MIU")))
+
+(defun get-offspring (target)
+(let ((bob 1))
+  (reduce #'append 
   (remove nil
           (mapcar #'(lambda (rule)
-                      (list (rule-number  rule)
+                      ;(list (rule-number  rule)
                       (iter-greed-clean (rule-regex rule)
                                         (rule-replacement rule)
-                                        target)))
-                  *production-rules*)))
+                                        target))
+                  *production-rules*)))))
 
 
 (iter-greed "I$"  "IU"  "MUIIIIIB")
