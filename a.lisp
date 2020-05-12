@@ -17,26 +17,29 @@
 (ppcre:all-matches  ".*III.*" "heIIIIlo")
 
 
-(defun iter-greed (perl-regex target-string)
+(defun iter-greed (perl-regex replacement-string target-string)
   "TODO assumes only 1 non greedy rep clause"
   (let* ((tree (ppcre:parse-string perl-regex))
          (scanner (f tree 0)))
-    (loop :for i :from 1 :to 10
+    (loop :for i :from 1
           :while (multiple-value-bind (a b)
                    (ppcre:regex-replace 
-                          (f tree i)
-                          target-string
-                          "\\1U\\2")
+                     (f tree i)
+                     target-string
+                     replacement-string)
                    b)
           :collect (multiple-value-bind (a b)
-                   (ppcre:regex-replace 
-                          (f tree i)
-                          target-string
-                          "\\1U\\2")
-                   a))))
+                     (ppcre:regex-replace 
+                       (f tree i)
+                       target-string
+                       replacement-string)
+                     a))))
 
+(delete-duplicates 
+  (iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIIIIlo" ) :test #'string=)
 
 (delete-duplicates (iter-greed "(.*?)III(.*)"  "hellIIIIIlo") :test #'string=)
+
 (loop :for i :in (list 1 2 3 4 nil 8 9)
       :while i
       :collect i)
