@@ -7,12 +7,36 @@
 ; mu puzzle  - symbol shunting
 ;1) I$ -> IU
 ;2) Mx -> Mxx  e.g. MIU -> MIUIU
-;2) M.* -> M&&  e.g. MIU -> MIUIU
+ ;2) M.* -> M&&  e.g. MIU -> MIUIU
 ;3) xIIIx -> xUx
-;3) \(.*\)III\(.*\) -> \1U\2
+ ;3) \(.*\)III\(.*\) -> \1U\2
 ;4) UU -> nil
 
+(setf *production-rules*
+      '((1 "I$" "IU")
+        (2 "M(.*)" "M\\1\\1")
+        (3 "(.*?)III(.*)" "\\1U\\2")
+        (4 "(.*?)UU(.*)" "\\1\\2")))
+(defun rule-number (rule)
+  (car rule))
+(defun rule-regex (rule)
+  (second rule))
+(defun rule-replacement (rule)
+  (third rule))
+
+(rule-replacement
+(car *production-rules*))
+
+
 (iter-greed "I$"  "IU"  "MUIIIIIB")
+(iter-greed "M(.*)"  "M\\1\\1"  "MIB")
+(delete-duplicates 
+  (iter-greed "(.*?)UU(.*)"  "\\1\\2"  "MUUBUU") 
+  :test #'string=)
+(ppcre:regex-replace-all "UU"
+                         "MIUUBlalaUUj"
+                         "")
+                         
 
 (ppcre:regex-replace 
 (f (ppcre:parse-string "I$") 0)
