@@ -27,9 +27,18 @@
 (rule-replacement
 (car *production-rules*))
 
+(let ((target "MIUU"))
+  (remove nil
+          (mapcar #'(lambda (rule)
+                      (list (rule-number  rule)
+                      (iter-greed-clean (rule-regex rule)
+                                        (rule-replacement rule)
+                                        target)))
+                  *production-rules*)))
+
 
 (iter-greed "I$"  "IU"  "MUIIIIIB")
-(iter-greed "M(.*)"  "M\\1\\1"  "MIB")
+(iter-greed "M(.*)"  "M\\1\\1"  "MIU")
 (delete-duplicates 
   (iter-greed "(.*?)UU(.*)"  "\\1\\2"  "MUUBUU") 
   :test #'string=)
@@ -60,6 +69,11 @@
 (ppcre:all-matches  ".*III.*" "heIIIIlo")
 
 
+(defun iter-greed-clean (perl-regex replacement-string target-string)
+  (delete-duplicates 
+    (iter-greed  perl-regex replacement-string target-string)
+    :test #'string=))
+
 (defun iter-greed (perl-regex replacement-string target-string)
   "TODO assumes only 1 non greedy repitition clause"
   (let* ((tree (ppcre:parse-string perl-regex))
@@ -82,10 +96,11 @@
                 (ppcre:regex-replace perl-regex
                                      target-string
                                      replacement-string) b)
+          (list 
           (multiple-value-bind (a b)
             (ppcre:regex-replace perl-regex
                                  target-string
-                                 replacement-string) a)))))
+                                 replacement-string) a))))))
 
 (delete-duplicates 
   (iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIIIIlo" ) :test #'string=)
