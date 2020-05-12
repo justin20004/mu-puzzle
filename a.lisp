@@ -12,7 +12,7 @@
 ;3) \(.*\)III\(.*\) -> \1U\2
 ;4) UU -> nil
 
-(iter-greed "I$"  "IU"  "MUIIIII" )
+(iter-greed "I$"  "IU"  "MUIIIIIB")
 
 (ppcre:regex-replace 
 (f (ppcre:parse-string "I$") 0)
@@ -30,7 +30,7 @@
               (or (non-greedy-in-tree? (car tree))
                   (non-greedy-in-tree? (cdr tree)))))))
 
-(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIIIIlo" )
+(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIlo" )
 
 (ppcre:scan "s/III//" "heIIIIlo")
 (ppcre:all-matches  ".*III.*" "heIIIIlo")
@@ -54,7 +54,10 @@
                            target-string
                            replacement-string)
                          a))
-        (list
+        (when (multiple-value-bind (a b)
+                (ppcre:regex-replace perl-regex
+                                     target-string
+                                     replacement-string) b)
           (multiple-value-bind (a b)
             (ppcre:regex-replace perl-regex
                                  target-string
