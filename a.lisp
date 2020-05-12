@@ -5,35 +5,60 @@
 (defun bob ())
 
 ; mu puzzle  - symbol shunting
-;1) I$ -> append U
+;1) I$ -> IU
 ;2) Mx -> Mxx  e.g. MIU -> MIUIU
 ;2) M.* -> M&&  e.g. MIU -> MIUIU
 ;3) xIIIx -> xUx
 ;3) \(.*\)III\(.*\) -> \1U\2
 ;4) UU -> nil
 
+(iter-greed "I$"  "IU"  "MUIIIII" )
+
+(ppcre:regex-replace 
+(f (ppcre:parse-string "I$") 0)
+"helloII" "IU")
+
+
+(non-greedy-in-tree? (ppcre:parse-string "(.*?)I$"))
+
+(defun non-greedy-in-tree? (tree)
+  (cond  ((null tree) nil)
+         ((listp tree)
+          (if (eq (car tree)
+                      :NON-GREEDY-REPETITION)
+              t
+              (or (non-greedy-in-tree? (car tree))
+                  (non-greedy-in-tree? (cdr tree)))))))
+
+(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIIIIlo" )
 
 (ppcre:scan "s/III//" "heIIIIlo")
 (ppcre:all-matches  ".*III.*" "heIIIIlo")
 
 
 (defun iter-greed (perl-regex replacement-string target-string)
-  "TODO assumes only 1 non greedy rep clause"
+  "TODO assumes only 1 non greedy repitition clause"
   (let* ((tree (ppcre:parse-string perl-regex))
-         (scanner (f tree 0)))
-    (loop :for i :from 1
-          :while (multiple-value-bind (a b)
-                   (ppcre:regex-replace 
-                     (f tree i)
-                     target-string
-                     replacement-string)
-                   b)
-          :collect (multiple-value-bind (a b)
-                     (ppcre:regex-replace 
-                       (f tree i)
-                       target-string
-                       replacement-string)
-                     a))))
+         (has-greedy (non-greedy-in-tree? tree)))
+    (if has-greedy
+        (loop :for i :from 1
+              :while (multiple-value-bind (a b)
+                       (ppcre:regex-replace 
+                         (f tree i)
+                         target-string
+                         replacement-string)
+                       b)
+              :collect (multiple-value-bind (a b)
+                         (ppcre:regex-replace 
+                           (f tree i)
+                           target-string
+                           replacement-string)
+                         a))
+        (list
+          (multiple-value-bind (a b)
+            (ppcre:regex-replace perl-regex
+                                 target-string
+                                 replacement-string) a)))))
 
 (delete-duplicates 
   (iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIIIIlo" ) :test #'string=)
