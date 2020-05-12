@@ -1,8 +1,5 @@
-(asdf:load-system "justinsys")
-(ql:system-apropos "nov")
 (ql:quickload "cl-ppcre")
 
-(defun bob ())
 
 ; mu puzzle  - symbol shunting
 ;1) I$ -> IU
@@ -17,6 +14,7 @@
         (2 "M(.*)" "M\\1\\1")
         (3 "(.*?)III(.*)" "\\1U\\2")
         (4 "(.*?)UU(.*)" "\\1\\2")))
+
 (defun rule-number (rule)
   (car rule))
 (defun rule-regex (rule)
@@ -24,8 +22,6 @@
 (defun rule-replacement (rule)
   (third rule))
 
-(rule-replacement
-(car *production-rules*))
 
 (defun do-n (target n)
   "target is a list -- returns a list"
@@ -38,8 +34,8 @@
            (mapcar #'get-offspring 
                    target)) (- n 1))))
 
-(find "MU" (do-n '("MI") 8)
-      :test #'string=)
+(time (find "MU" (do-n '("MI") 9)
+      :test #'string=))
   
 
 
@@ -48,15 +44,14 @@
 (get-offspring "MIU")))
 
 (defun get-offspring (target)
-(let ((bob 1))
   (reduce #'append 
-  (remove nil
-          (mapcar #'(lambda (rule)
-                      ;(list (rule-number  rule)
-                      (iter-greed-clean (rule-regex rule)
-                                        (rule-replacement rule)
-                                        target))
-                  *production-rules*)))))
+          (remove nil
+                  (mapcar #'(lambda (rule)
+                              ;(list (rule-number  rule)
+                              (iter-greed-clean (rule-regex rule)
+                                                (rule-replacement rule)
+                                                target))
+                          *production-rules*))))
 
 
 (iter-greed "I$"  "IU"  "MUIIIIIB")
