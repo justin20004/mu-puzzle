@@ -1,4 +1,5 @@
 (ql:quickload "cl-ppcre")
+(ql:quickload "bordeaux-threads")
 
 
 ; mu puzzle  - symbol shunting
@@ -26,17 +27,49 @@
 (defun do-n (target n)
   "target is a list -- returns a list"
   (if (= n 1)
-  (reduce #'append
-           (mapcar #'get-offspring 
-                   target))
-  (do-n
-  (reduce #'append
-           (mapcar #'get-offspring 
-                   target)) (- n 1))))
+      (remove-duplicates
+        (reduce #'append
+                (mapcar #'get-offspring 
+                        target))
+        :test #'string=)
+      (do-n
+        (remove-duplicates
+          (reduce #'append
+                  (mapcar #'get-offspring 
+                          target))
+          :test #'string=)
+        (- n 1))))
 
-(time (find "MU" (do-n '("MI") 9)
+(length (do-n '("MI") 7))
+
+(length (remove-duplicates (do-n '("MI") 7)
+        :test #'string=))
+
+(time (find "MU" (do-n '("MI") 6)
       :test #'string=))
+
+(defun print-it (n)
+  (let* ((orig (do-n '("MI") n))
+         (found (find "MU" orig
+               :test #'string=)))
+    (format #.*standard-output* "at ~A orig  len ~A~%" n (length orig))
+    (format #.*standard-output* "at ~A found ~A~%" n found)))
+
+(print-it 8)
+         
+
+(bt:make-thread #'(lambda ()
+                    (print-it 9))
+                :name 'mu)
+(setf thr *)
+
   
+;CL-USER> (time (find "MU" (do-n '("MI") 9)
+;      :test #'string=))
+;13961.783 seconds real time
+;27565864700 cons cells
+;NIL
+(/ (/ 13961  60.0) 60.0)
 
 
 (reduce #'append 
@@ -47,7 +80,6 @@
   (reduce #'append 
           (remove nil
                   (mapcar #'(lambda (rule)
-                              ;(list (rule-number  rule)
                               (iter-greed-clean (rule-regex rule)
                                                 (rule-replacement rule)
                                                 target))
@@ -192,3 +224,12 @@ b
 (ppcre:parse-string  "(.*)III(.*)")
 (ppcre:parse-string "(?:ab)??")
 (ppcre:parse-string "(.*ab)\\1??")
+
+;;;;;;;;
+
+(quote hi)
+(intern "hi")
+
+(eq
+(intern "HI")
+'hi)
