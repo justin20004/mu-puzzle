@@ -1,6 +1,54 @@
 (ql:quickload "cl-ppcre")
 (ql:quickload "bordeaux-threads")
+(java:add-to-classpath #p"/mnt/shared-things-1.0.0-jar-with-dependencies.jar")
+(ql:quickload :cl-jena)
 
+(jena:get-default-model)
+
+(jena:sparql-update "insert data {<GEB> <implies> <MI> }")
+(jena::print-alists  
+  (jena:sparql-select "select * where {?s ?p ?o} limit 4 "))
+
+(jena:sparql-select "select (count(?s) as ?cnt) 
+                     where {?s ?p ?o} ") 
+
+(jena:write-dataset-to-file "/mnt/mu1.ttl")
+
+(get-fresh-theorems)
+(bt:thread-alive-p *thr*)
+(setf *thr* (bt:make-thread #'(lambda ()
+                    (mapcar #'insert-derivations
+                            (get-fresh-theorems)))
+                :name 'derive))
+
+(defun get-fresh-theorems ()
+  "from default dataset"
+  (mapcar #'(lambda (x)
+              (cdar x))
+          (jena:sparql-select "select ?theorem
+                               where {
+                               ?s <implies> ?o .
+                               optional {
+                               ?o <implies> ?oo .
+                               }
+                               filter (!bound(?oo)) .
+                               bind(substr(str(?o),13)   as ?theorem)
+                               }")))
+
+
+(derive-theorems "MI")
+
+(insert-derivations "MI")
+
+(defun insert-derivations (theorem)
+  (let* ((derivations (derive-theorems theorem)))
+    (dolist (new-theorem derivations)
+      (jena:sparql-update 
+        (format nil 
+                "insert data {<~A> <implies> <~A>}"
+                theorem
+                new-theorem)))))
+                
 
 ; mu puzzle  - symbol shunting
 ;1) I$ -> IU
@@ -29,13 +77,13 @@
   (if (= n 1)
       (remove-duplicates
         (reduce #'append
-                (mapcar #'get-offspring 
+                (mapcar #'derive-theorems 
                         target))
         :test #'string=)
       (do-n
         (remove-duplicates
           (reduce #'append
-                  (mapcar #'get-offspring 
+                  (mapcar #'derive-theorems 
                           target))
           :test #'string=)
         (- n 1))))
@@ -59,9 +107,10 @@
          
 
 (bt:make-thread #'(lambda ()
-                    (print-it 9))
+                    (print-it 5))
                 :name 'mu)
 (setf thr *)
+(bt:thread-alive-p thr)
 
   
 ;CL-USER> (time (find "MU" (do-n '("MI") 9)
@@ -73,16 +122,16 @@
 
 
 (reduce #'append 
-(mapcar #'get-offspring
-(get-offspring "MIU")))
+(mapcar #'derive-theorems
+(derive-theorems "MIU")))
 
-(defun get-offspring (target)
+(defun derive-theorems (theorem)
   (reduce #'append 
           (remove nil
                   (mapcar #'(lambda (rule)
                               (iter-greed-clean (rule-regex rule)
                                                 (rule-replacement rule)
-                                                target))
+                                                theorem))
                           *production-rules*))))
 
 
@@ -112,7 +161,7 @@
               (or (non-greedy-in-tree? (car tree))
                   (non-greedy-in-tree? (cdr tree)))))))
 
-(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIlo" )
+(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIUUIIIIlo" )
 
 (ppcre:scan "s/III//" "heIIIIlo")
 (ppcre:all-matches  ".*III.*" "heIIIIlo")
@@ -126,8 +175,8 @@
 (defun iter-greed (perl-regex replacement-string target-string)
   "TODO assumes only 1 non greedy repitition clause"
   (let* ((tree (ppcre:parse-string perl-regex))
-         (has-greedy (non-greedy-in-tree? tree)))
-    (if has-greedy
+         (has-non-greedy (non-greedy-in-tree? tree)))
+    (if has-non-greedy
         (loop :for i :from 1
               :while (multiple-value-bind (a b)
                        (ppcre:regex-replace 
@@ -229,7 +278,11 @@ b
 
 (quote hi)
 (intern "hi")
+(intern "bye")
 
 (eq
 (intern "HI")
 'hi)
+
+(elt (bt:all-threads) 6)
+
