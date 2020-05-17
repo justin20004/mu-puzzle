@@ -2,6 +2,11 @@
 (ql:quickload "bordeaux-threads")
 (java:add-to-classpath #p"/mnt/shared-things-1.0.0-jar-with-dependencies.jar")
 (ql:quickload :cl-jena)
+(ql:system-apropos "metering")
+(ql:quickload "metering")
+
+(mon:monitor-form (derive-theorems "MI"))
+(mon:monitor-form (print-it 8))
 
 (jena:get-default-model)
 
@@ -88,12 +93,12 @@
           :test #'string=)
         (- n 1))))
 
-(length (do-n '("MI") 7))
+(length (do-n '("MI") 8))
 
 (length (remove-duplicates (do-n '("MI") 7)
         :test #'string=))
 
-(time (find "MU" (do-n '("MI") 6)
+(time (find "MU" (do-n '("MI") 7)
       :test #'string=))
 
 (defun print-it (n)
@@ -107,7 +112,8 @@
          
 
 (bt:make-thread #'(lambda ()
-                    (print-it 5))
+                   (mon:monitor-form 
+                    (print-it 8)))
                 :name 'mu)
 (setf thr *)
 (bt:thread-alive-p thr)
@@ -177,31 +183,34 @@
   (let* ((tree (ppcre:parse-string perl-regex))
          (has-non-greedy (non-greedy-in-tree? tree)))
     (if has-non-greedy
-        (loop :for i :from 1
-              :while (multiple-value-bind (a b)
-                       (ppcre:regex-replace 
-                         (f tree i)
-                         target-string
-                         replacement-string)
-                       b)
-              :collect (multiple-value-bind (a b)
+        (let* ((hit nil)
+               (matches nil))
+          (loop :for i :from 1
+                :while (multiple-value-bind (match match-found)
                          (ppcre:regex-replace 
                            (f tree i)
                            target-string
                            replacement-string)
-                         a))
-        (when (multiple-value-bind (a b)
-                (ppcre:regex-replace perl-regex
-                                     target-string
-                                     replacement-string) b)
-          (list 
-          (multiple-value-bind (a b)
-            (ppcre:regex-replace perl-regex
-                                 target-string
-                                 replacement-string) a))))))
+                         (progn
+                           (setf hit match-found)
+                           (when match-found
+                             (setf matches 
+                                   (append matches (list match))))
+                         match-found)))
+          matches)
+        (let* ((m nil))
+          (when (multiple-value-bind (match match-found)
+                  (ppcre:regex-replace perl-regex
+                                       target-string
+                                       replacement-string)
+                  (progn 
+                    (setf m match)
+                  match-found))
+            (list m))))))
 
-(delete-duplicates 
-  (iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MUIIIIIlo" ) :test #'string=)
+(ppcre:regex-replace (ppcre:parse-string "(.*?)III(.*)")
+                     "MIIIU" "\\1U\\2")
+(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MIIIU" )
 
 (delete-duplicates (iter-greed "(.*?)III(.*)"  "hellIIIIIlo") :test #'string=)
 
