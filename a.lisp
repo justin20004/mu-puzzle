@@ -76,6 +76,9 @@
 (defun rule-replacement (rule)
   (third rule))
 
+(bt:make-thread #'(lambda ()
+(mon:monitor-form (do-n '("MI") 8)))
+                :name 'muu)
 
 (defun do-n (target n)
   "target is a list -- returns a list"
@@ -93,7 +96,11 @@
           :test #'string=)
         (- n 1))))
 
-(length (do-n '("MI") 8))
+; TODO if i keep the theorems in a HT duplicates wont be a problem
+(setf *seven* (do-n '("MI") 7))
+(length *s2*)
+(setf *s2* (append *s2* *s2*))
+(time (remove-duplicates *s2* :test #'string= ))
 
 (length (remove-duplicates (do-n '("MI") 7)
         :test #'string=))
@@ -126,10 +133,43 @@
 ;NIL
 (/ (/ 13961  60.0) 60.0)
 
+(eql "hi" "hi")
+(setf *ht* (make-hash-table :test 'equal))
+(setf (gethash "MI" *ht*) t)
 
-(reduce #'append 
-(mapcar #'derive-theorems
-(derive-theorems "MIU")))
+(bt:make-thread #'(lambda ()
+                    (maphash #'(lambda (k v)
+                                 (derive-theorems k *ht*))
+                             *ht*)
+                    (format #.*standard-output* "done~%"))
+                :name 'mu-hash)
+                
+
+(print-ht *ht*)
+(hash-table-size *ht*)
+(hash-table-count *ht*)
+
+(derive-theorems "MI")
+
+(let ((rule (car *production-rules*)))
+(iter-greed (rule-regex rule)
+            (rule-replacement rule)
+            "MII" h))
+(setf h *)
+(mapcar #'print-ht *)
+
+; with HT
+(defun derive-theorems (theorem &optional hashtable)
+  (let* ((ht (if (null hashtable)
+                 (make-hash-table)
+                 hashtable)))
+    (dolist (rule *production-rules*)
+                (iter-greed       (rule-regex rule)
+                                  (rule-replacement rule)
+                                  theorem
+                                  ht))
+    ht))
+
 
 (defun derive-theorems (theorem)
   (reduce #'append 
@@ -178,9 +218,14 @@
     (iter-greed  perl-regex replacement-string target-string)
     :test #'string=))
 
-(defun iter-greed (perl-regex replacement-string target-string)
-  "TODO assumes only 1 non greedy repitition clause"
-  (let* ((tree (ppcre:parse-string perl-regex))
+(defun iter-greed (perl-regex replacement-string target-string 
+                              &optional (hashtable nil))
+  "TODO assumes only 1 non greedy repitition clause 
+   returns HT of matches"
+  (let* ((ht (if (null hashtable)
+               (make-hash-table)
+               hashtable))
+         (tree (ppcre:parse-string perl-regex))
          (has-non-greedy (non-greedy-in-tree? tree)))
     (if has-non-greedy
         (let* ((hit nil)
@@ -194,23 +239,33 @@
                          (progn
                            (setf hit match-found)
                            (when match-found
-                             (setf matches 
-                                   (append matches (list match))))
+                             (setf (gethash match ht) t)
+                             ;(setf matches (append matches (list match)))
+                             )
                          match-found)))
-          matches)
+          ht)
+        ; just a single match or no match
         (let* ((m nil))
           (when (multiple-value-bind (match match-found)
                   (ppcre:regex-replace perl-regex
                                        target-string
                                        replacement-string)
                   (progn 
-                    (setf m match)
+                     (setf (gethash match ht) t)
+                    ;(setf m match)
                   match-found))
-            (list m))))))
+            ;(list m)
+            ht
+            )))))
 
 (ppcre:regex-replace (ppcre:parse-string "(.*?)III(.*)")
                      "MIIIU" "\\1U\\2")
-(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MIIIU" )
+(iter-greed "(.*?)III(.*)"  "\\1U\\2"  "MIIIIIUIIIIIU" )
+
+(defun print-ht (ht)
+  (maphash #'(lambda (k v)
+               (format t "~A: ~A~%" k v))
+           ht))
 
 (delete-duplicates (iter-greed "(.*?)III(.*)"  "hellIIIIIlo") :test #'string=)
 
