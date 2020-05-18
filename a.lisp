@@ -19,7 +19,31 @@
 
 (jena:write-dataset-to-file "/mnt/mu1.ttl")
 
-(get-fresh-theorems)
+(ql:quickload "alexandria")
+(alexandria:alist-hash-table *)
+(print-ht *)
+
+; get-fresh-theorems (from graph)
+;      -> alist -> HT
+(alexandria:alist-hash-table
+  (theorem-list->alist '("MI"))
+  :test #'equal)
+(setf *ht* *)
+
+(let ((ht (make-hash-table :test #'equal)))
+  (maphash #'(lambda (k v)
+               (derive-theorems-ht k ht))
+           *ht*)
+  ht)
+(print-ht *ht*)
+(print-ht *)
+
+
+(defun theorem-list->alist (lis)
+  (mapcar #'(lambda (theorem)
+              (cons theorem t))
+          lis))
+
 (bt:thread-alive-p *thr*)
 (setf *thr* (bt:make-thread #'(lambda ()
                     (mapcar #'insert-derivations
@@ -41,9 +65,19 @@
                                }")))
 
 
-(derive-theorems "MI")
 
-(insert-derivations "MI")
+; insert initial theorem
+; get-fresh-therems (HT)
+; use that HT to derive 1 round of theorems (HT)
+; insert those theorems (from HT)
+(defun insert-theorems-ht (hashtable)
+    (dolist (new-theorem derivations)
+      (jena:sparql-update 
+        (format nil 
+                "insert data {<~A> <implies> <~A>}"
+                theorem
+                new-theorem)))))
+
 
 (defun insert-derivations (theorem)
   (let* ((derivations (derive-theorems theorem)))
@@ -139,7 +173,7 @@
 
 (bt:make-thread #'(lambda ()
                     (maphash #'(lambda (k v)
-                                 (derive-theorems k *ht*))
+                                 (derive-theorems-ht k *ht*))
                              *ht*)
                     (format #.*standard-output* "done~%"))
                 :name 'mu-hash)
@@ -149,7 +183,7 @@
 (hash-table-size *ht*)
 (hash-table-count *ht*)
 
-(derive-theorems "MI")
+(derive-theorems-ht "MI")
 
 (let ((rule (car *production-rules*)))
 (iter-greed (rule-regex rule)
@@ -159,7 +193,7 @@
 (mapcar #'print-ht *)
 
 ; with HT
-(defun derive-theorems (theorem &optional hashtable)
+(defun derive-theorems-ht (theorem &optional hashtable)
   (let* ((ht (if (null hashtable)
                  (make-hash-table)
                  hashtable)))
@@ -239,7 +273,8 @@
                          (progn
                            (setf hit match-found)
                            (when match-found
-                             (setf (gethash match ht) t)
+                             ; TODO this assumes a new theorem is only deriable from a single theorem (in the current generation)
+                             (setf (gethash match ht) target-string)
                              ;(setf matches (append matches (list match)))
                              )
                          match-found)))
@@ -251,7 +286,7 @@
                                        target-string
                                        replacement-string)
                   (progn 
-                     (setf (gethash match ht) t)
+                     (setf (gethash match ht) target-string)
                     ;(setf m match)
                   match-found))
             ;(list m)
